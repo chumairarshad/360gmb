@@ -1,0 +1,323 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String?
+  avatarUrl     String?
+  role          String         @default("OWNER") // OWNER, ADMIN, MEMBER, AGENCY_ADMIN, AGENCY_MEMBER
+  planType      String         @default("FREE")  // FREE, STARTER, PRO, AGENCY
+  agencyId      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  businesses    BusinessUser[]
+  googleConns   GoogleConnection[]
+  teamMemberOf  TeamMember[]
+  notifications Notification[]
+  agencyOwned   Agency?        @relation("AgencyOwner")
+}
+
+model Agency {
+  id          String         @id @default(uuid())
+  name        String
+  logoUrl     String?
+  ownerId     String         @unique
+  owner       User           @relation("AgencyOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  clients     AgencyClient[]
+  teamMembers TeamMember[]
+}
+
+model AgencyClient {
+  id          String   @id @default(uuid())
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientName  String
+  clientEmail String
+  companyName String
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("AGENCY_MEMBER")
+  createdAt DateTime @default(now())
+}
+
+model Business {
+  id            String         @id @default(uuid())
+  name          String
+  category      String
+  description   String?
+  address       String
+  city          String
+  state         String
+  country       String
+  postalCode    String
+  phone         String?
+  website       String?
+  email         String?
+  hoursJson     String?
+  servicesJson  String?
+  productsJson  String?
+  logoUrl       String?
+  photosJson    String?
+  score         Int            @default(70)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  users         BusinessUser[]
+  locations     Location[]
+  audits        Audit[]
+  keywords      Keyword[]
+  competitors   Competitor[]
+  reviews       Review[]
+  contentPosts  ContentPost[]
+  socialConns   SocialConnection[]
+  automations   Automation[]
+  analytics     AnalyticsData[]
+  reports       Report[]
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  address     String
+  city        String
+  state       String
+  postalCode  String
+  phone       String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+
+  gmbLocations GoogleLocation[]
+}
+
+model BusinessUser {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String   @default("OWNER")
+}
+
+model GoogleConnection {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEmail  String
+  accessToken  String
+  refreshToken String?
+  isConnected  Boolean          @default(true)
+  connectedAt  DateTime         @default(now())
+
+  locations    GoogleLocation[]
+}
+
+model GoogleLocation {
+  id            String           @id @default(uuid())
+  connectionId  String
+  connection    GoogleConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  locationId    String
+  location      Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  gmbLocationId String
+  syncStatus    String           @default("SYNCED")
+  lastSyncedAt  DateTime         @default(now())
+}
+
+model Audit {
+  id            String       @id @default(uuid())
+  businessId    String
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  score         Int
+  overallStatus String
+  issuesCount   Int
+  auditedAt     DateTime     @default(now())
+
+  issues        AuditIssue[]
+}
+
+model AuditIssue {
+  id                String        @id @default(uuid())
+  auditId           String
+  audit             Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  severity          String        @default("MEDIUM") // CRITICAL, HIGH, MEDIUM, LOW
+  category          String        @default("SEO")    // PROFILE_INFO, PHOTOS, REVIEWS, SEO, POSTS, HOURS
+  title             String
+  description       String
+  whyItMatters      String
+  recommendedAction String
+  estimatedImpact   Int
+  status            String        @default("OPEN")
+  createdAt         DateTime      @default(now())
+}
+
+model Keyword {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  seedKeyword String
+  keyword     String
+  category    String   @default("Primary")
+  intent      String   @default("Commercial")
+  difficulty  Int
+  estVolume   Int
+  currentRank Int
+  opportunity Int
+  competition Float
+  createdAt   DateTime @default(now())
+
+  ranks       KeywordRank[]
+}
+
+model KeywordRank {
+  id        String   @id @default(uuid())
+  keywordId String
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  rank      Int
+  checkedAt DateTime @default(now())
+}
+
+model Competitor {
+  id            String   @id @default(uuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name          String
+  rating        Float
+  reviewCount   Int
+  website       String?
+  categories    String
+  photosCount   Int
+  postFrequency String
+  estVisibility Int
+  createdAt     DateTime @default(now())
+}
+
+model Review {
+  id             String       @id @default(uuid())
+  businessId     String
+  business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerName   String
+  customerAvatar String?
+  rating         Int
+  text           String
+  reviewDate     DateTime
+  isAnswered     Boolean      @default(false)
+  sentiment      String       @default("POSITIVE") // POSITIVE, NEUTRAL, NEGATIVE
+  createdAt      DateTime     @default(now())
+
+  replies        ReviewReply[]
+}
+
+model ReviewReply {
+  id            String   @id @default(uuid())
+  reviewId      String
+  review        Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  replyText     String
+  generatedByAi Boolean  @default(true)
+  status        String   @default("PUBLISHED")
+  publishedAt   DateTime @default(now())
+}
+
+model ContentPost {
+  id           String    @id @default(uuid())
+  businessId   String
+  business     Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  postType     String    @default("GMB_POST") // GMB_POST, GMB_OFFER, GMB_EVENT, GMB_ANNOUNCEMENT, INSTAGRAM, FACEBOOK, LINKEDIN
+  title        String
+  body         String
+  ctaType      String?
+  ctaUrl       String?
+  imageUrl     String?
+  status       String    @default("DRAFT")
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+model SocialConnection {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  platform    String
+  accountName String
+  isConnected Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Automation {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type        String
+  name        String
+  isEnabled   Boolean  @default(true)
+  configJson  String?
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  runs        AutomationRun[]
+}
+
+model AutomationRun {
+  id           String     @id @default(uuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  status       String     @default("SUCCESS")
+  logsJson     String?
+  runAt        DateTime   @default(now())
+}
+
+model AnalyticsData {
+  id                String   @id @default(uuid())
+  businessId        String
+  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  date              DateTime
+  profileViews      Int
+  calls             Int
+  clicks            Int
+  directionRequests Int
+  reviewsCount      Int
+  avgRating         Float
+}
+
+model Report {
+  id             String   @id @default(uuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title          String
+  reportType     String   @default("MONTHLY_AUDIT")
+  reportDataJson String
+  generatedAt    DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
