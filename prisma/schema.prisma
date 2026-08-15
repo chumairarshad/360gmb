@@ -128,19 +128,29 @@ model GoogleConnection {
   googleEmail  String
   accessToken  String
   refreshToken String?
+  expiresAt    DateTime?
   isConnected  Boolean          @default(true)
   connectedAt  DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
 
   locations    GoogleLocation[]
+
+  @@unique([userId, googleEmail])
 }
 
 model GoogleLocation {
   id            String           @id @default(uuid())
   connectionId  String
   connection    GoogleConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  locationId    String
-  location      Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  locationId    String?
+  location      Location?        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  gmbAccountId  String?
   gmbLocationId String
+  locationName  String?
+  address       String?
+  phone         String?
+  website       String?
+  category      String?
   syncStatus    String           @default("SYNCED")
   lastSyncedAt  DateTime         @default(now())
 }

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { Globe, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Globe, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,14 +12,40 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [plan, setPlan] = useState<'FREE' | 'STARTER' | 'PRO' | 'AGENCY'>('FREE');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      router.push(`/dashboard?plan=${plan.toLowerCase()}`);
-    }, 600);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          planType: plan,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMessage(data.error || 'Failed to create account. Please check your details.');
+        setIsLoading(false);
+        return;
+      }
+
+      router.push('/dashboard');
+      router.refresh();
+    } catch {
+      setErrorMessage('Network error during registration. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -32,6 +58,13 @@ export default function RegisterPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">Create 360 GMB Account</h1>
           <p className="text-xs text-slate-400">Start auditing and optimizing your Google Business Profile today.</p>
         </div>
+
+        {errorMessage && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
@@ -59,10 +92,11 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password</label>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Password (Min 6 Characters)</label>
             <input
               type="password"
               required
+              minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm"

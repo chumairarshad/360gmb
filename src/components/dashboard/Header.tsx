@@ -194,6 +194,19 @@ export function Header({
             </div>
           )}
         </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+          }}
+          className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 shadow-2xs transition-colors cursor-pointer"
+          title="Sign Out"
+          aria-label="Sign Out"
+        >
+          <Unplug className="w-4 h-4" />
+        </button>
       </div>
     </header>
   );
